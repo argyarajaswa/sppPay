@@ -30,6 +30,13 @@
                     <div class="card mt-3 mb-3">
                         <div class="card-title mt-3 ml-2">
                             <a href="<?= site_url('masterdata/add_siswa') ?>" class="btn btn-primary">Tambah Data Siswa</a>
+                            <a href="<?= base_url('masterdata/download_template_siswa') ?>" class="btn btn-success">
+                                <i class="fas fa-file-download"></i> Download Template
+                            </a>
+
+                            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#importModal">
+                                <i class="fas fa-file-import"></i> Import CSV
+                            </button>
                         </div>
                         <div class="card-body">
                             <div class="table">
@@ -74,6 +81,36 @@
 
     <!-- Modal -->
     <?php foreach ($siswa as $s) : ?>
+        <div class="modal fade" id="importModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Import Data Siswa</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="<?= base_url('masterdata/import_siswa') ?>" method="post" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Unduh Template</label>
+                        <p><a href="<?= base_url('masterdata/download_template_siswa') ?>" class="btn btn-sm btn-info">
+                            <i class="fas fa-download"></i> Download Template CSV
+                        </a></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="csv_file">Pilih File CSV</label>
+                        <input type="file" class="form-control-file" id="csv_file" name="csv_file" required accept=".csv">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                    <button type="submit" class="btn btn-primary">Import Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
         <div class="modal fade" id="modalEdit<?= $s->NISN ?>">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">

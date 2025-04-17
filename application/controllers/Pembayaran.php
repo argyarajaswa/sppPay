@@ -131,6 +131,45 @@ class Pembayaran extends CI_Controller
         }
     }
 
+    public function process_imported_student($nisn) {
+        // 1. Validasi siswa hasil import
+        $siswa = $this->db->get_where('tbl_siswa', ['NISN' => $nisn])->row();
+        
+        if (!$siswa) {
+            return ['status' => 'error', 'message' => 'Siswa tidak ditemukan'];
+        }
+    
+        // 2. Generate tagihan pertama kali
+        $existing_tagihan = $this->db->get_where('tbl_tagihan', ['NISN' => $nisn])->row();
+        
+        if (!$existing_tagihan) {
+            $data_tagihan = [
+                'NISN' => $siswa->NISN,
+                'ID_SPP' => $siswa->ID_SPP,
+                'BULAN' => date('m'),
+                'TAHUN' => date('Y'),
+                'TGL_JATUH_TEMPO' => $siswa->TEMPO,
+                'JUMLAH' => $this->db->get_where('tbl_spp', ['ID_SPP' => $siswa->ID_SPP])->row()->NOMINAL,
+                'STATUS' => 'BELUM LUNAS'
+            ];
+            $this->db->insert('tbl_tagihan', $data_tagihan);
+        }
+    
+        // 3. Proses pembayaran
+        $data_pembayaran = [
+            'NISN' => $nisn,
+            'ID_TAGIHAN' => $this->db->insert_id(),
+            'TGL_BAYAR' => date('Y-m-d'),
+            'JUMLAH_BAYAR' => $data_tagihan['JUMLAH'],
+            'ID_PETUGAS' => $this->session->userdata('id_petugas'),
+            'KETERANGAN' => 'LUNAS'
+        ];
+        
+        $this->db->insert('tbl_pembayaran', $data_pembayaran);
+        
+        return ['status' => 'success', 'id_pembayaran' => $this->db->insert_id()];
+    }
+
 
 
 

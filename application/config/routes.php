@@ -52,3 +52,6 @@ defined('BASEPATH') or exit('No direct script access allowed');
 $route['default_controller'] = 'auth';
 $route['404_override'] = '';
 $route['translate_uri_dashes'] = FALSE;
+
+$route['masterdata/import_siswa'] = 'MasterData/import_siswa';
+$route['masterdata/download_template_siswa'] = 'MasterData/download_template_siswa';

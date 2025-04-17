@@ -428,6 +428,175 @@ class MasterData extends CI_Controller
         }
     }
 
+    public function import_siswa() {
+        // Cek level akses
+        if ($this->session->userdata('level') != 'Admin') {
+            redirect('auth/blocked');
+        }
+    
+        $this->load->library('upload');
+    
+        // Konfigurasi upload
+        $config['upload_path'] = './assets/uploads/csv/';
+        $config['allowed_types'] = 'csv';
+        $config['max_size'] = 2048;
+        $config['file_name'] = 'siswa_import_' . time();
+    
+        $this->upload->initialize($config);
+    
+        if (!$this->upload->do_upload('csv_file')) {
+            $error = $this->upload->display_errors();
+            $this->session->set_flashdata('error', $error);
+            redirect('masterdata/siswa');
+        }
+    
+        // Proses file CSV
+        $file_data = $this->upload->data();
+        $file_path = $file_data['full_path'];
+    
+        // Baca file CSV
+        $csv = array_map('str_getcsv', file($file_path));
+        
+        // Validasi file tidak kosong
+        if (empty($csv) || count($csv) < 2) {
+            unlink($file_path);
+            $this->session->set_flashdata('error', 'File CSV kosong atau format tidak valid');
+            redirect('masterdata/siswa');
+        }
+    
+        $header = array_shift($csv); // Ambil header
+        $expected_header = ['NISN', 'NIS', 'NAMA', 'ID_KELAS', 'ID_SPP', 'ALAMAT', 'NO_TELP', 'TEMPO'];
+        
+        // Validasi header
+        if ($header !== $expected_header) {
+            unlink($file_path);
+            $this->session->set_flashdata('error', 'Format header CSV tidak sesuai. Gunakan template yang disediakan');
+            redirect('masterdata/siswa');
+        }
+    
+        $success_count = 0;
+        $fail_count = 0;
+        $fail_reasons = [];
+    
+        // Ambil data referensi dari database
+        $kelas_ids = array_column($this->db->get('tbl_kelas')->result_array(), 'ID_KELAS');
+        $spp_ids = array_column($this->db->get('tbl_spp')->result_array(), 'ID_SPP');
+    
+        foreach ($csv as $index => $row) {
+            // Pastikan jumlah kolom sesuai
+            if (count($row) != count($expected_header)) {
+                $fail_count++;
+                $fail_reasons[] = "Baris " . ($index + 2) . ": Jumlah kolom tidak sesuai";
+                continue;
+            }
+    
+            $data = array_combine($header, $row);
+            
+            // Validasi data
+            $errors = [];
+            
+            if (!preg_match('/^\d{10}$/', $data['NISN'])) {
+                $errors[] = 'NISN harus 10 digit angka';
+            }
+            
+            if (!preg_match('/^\d{8}$/', $data['NIS'])) {
+                $errors[] = 'NIS harus 8 digit angka';
+            }
+            
+            if (empty(trim($data['NAMA']))) {
+                $errors[] = 'Nama tidak boleh kosong';
+            }
+            
+            if (!in_array($data['ID_KELAS'], $kelas_ids)) {
+                $errors[] = 'ID Kelas tidak valid';
+            }
+            
+            if (!in_array($data['ID_SPP'], $spp_ids)) {
+                $errors[] = 'ID SPP tidak valid';
+            }
+    
+            if (empty($errors)) {
+                $insert_data = [
+                    'NISN' => $data['NISN'],
+                    'NIS' => $data['NIS'],
+                    'NAMA' => $data['NAMA'],
+                    'ID_KELAS' => $data['ID_KELAS'],
+                    'ID_SPP' => $data['ID_SPP'],
+                    'ALAMAT' => $data['ALAMAT'],
+                    'NO_TELP' => $data['NO_TELP'],
+                    'TEMPO' => !empty($data['TEMPO']) ? $data['TEMPO'] : date('Y-m-d', strtotime('+1 month'))
+                ];
+    
+                // Cek duplikat
+                $exists = $this->db->get_where('tbl_siswa', ['NISN' => $data['NISN']])->row();
+                if (!$exists) {
+                    if ($this->db->insert('tbl_siswa', $insert_data)) {
+                        $success_count++;
+                        activity_log('siswa', 'Mengimpor data siswa', $data['NISN'], 'CSV Import');
+                    } else {
+                        $fail_count++;
+                        $fail_reasons[] = "Baris " . ($index + 2) . ": Gagal menyimpan ke database";
+                    }
+                } else {
+                    $fail_count++;
+                    $fail_reasons[] = "Baris " . ($index + 2) . ": NISN sudah terdaftar";
+                }
+            } else {
+                $fail_count++;
+                $fail_reasons[] = "Baris " . ($index + 2) . ": " . implode(', ', $errors);
+            }
+        }
+    
+        unlink($file_path); // Hapus file setelah diproses
+    
+        // Siapkan pesan notifikasi
+        $message = "Import selesai: " . $success_count . " data berhasil, " . $fail_count . " data gagal.";
+        if ($fail_count > 0) {
+            $message .= "<br><br>Detail kesalahan:<br>" . implode("<br>", array_slice($fail_reasons, 0, 5));
+            if (count($fail_reasons) > 5) {
+                $message .= "<br>... dan " . (count($fail_reasons) - 5) . " kesalahan lainnya";
+            }
+        }
+    
+        $this->session->set_flashdata('success', $message);
+        redirect('masterdata/siswa');
+    }
+
+    public function download_template_siswa() {
+        $this->load->helper('download');
+        
+        // Ambil contoh ID yang valid dari database
+        $kelas = $this->db->get('tbl_kelas')->first_row();
+        $spp = $this->db->get('tbl_spp')->first_row();
+        
+        $data = "NISN,NIS,NAMA,ID_KELAS,ID_SPP,ALAMAT,NO_TELP,TEMPO\n";
+        $data .= "1234567890,12345678,Contoh Siswa,".$kelas->ID_KELAS.",".$spp->ID_SPP.",Jl. Contoh,0812345678,".date('Y-m-d')."\n";
+        
+        force_download('template_siswa.csv', $data);
+    }
+
+    public function edit_siswa($nisn) {
+        // Tambahkan validasi untuk data import
+        $this->form_validation->set_rules('ID_KELAS', 'Kelas', 'required|is_exists[tbl_kelas.ID_KELAS]');
+        $this->form_validation->set_rules('ID_SPP', 'SPP', 'required|is_exists[tbl_spp.ID_SPP]');
+        
+        if ($this->form_validation->run()) {
+            $data = [
+                'NIS' => $this->input->post('NIS'),
+                'NAMA' => $this->input->post('NAMA'),
+                'ID_KELAS' => $this->input->post('ID_KELAS'),
+                'ID_SPP' => $this->input->post('ID_SPP'),
+                'ALAMAT' => $this->input->post('ALAMAT'),
+                'NO_TELP' => $this->input->post('NO_TELP')
+            ];
+            
+            $this->db->where('NISN', $nisn)->update('tbl_siswa', $data);
+            redirect('masterdata/siswa');
+        }
+    }
+
+
+
 
 
 

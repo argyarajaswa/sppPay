@@ -26,6 +26,12 @@
             <div class="row">
                 <div class="col-lg">
                     <div class="card mt-3 mb-3">
+                        <!-- Tambahkan di bagian atas card-body, sebelum form -->
+                        <div class="card-title mt-3 ml-2">
+                            <button type="button" class="btn btn-success" data-toggle="modal" data-target="#importModal">
+                                <i class="fas fa-file-import"></i> Import dari CSV
+                            </button>
+                        </div>
                         <div class="card-body col-lg-6">
                             <form method="post" action="<?= base_url('masterdata/add_siswa') ?>">
                                 <div class="form-group">
@@ -96,6 +102,40 @@
 
 </div>
 <!-- /.content-wrapper -->
+ <!-- Tambahkan modal untuk import CSV di bagian bawah content-wrapper, sebelum footer -->
+<div class="modal fade" id="importModal" tabindex="-1" role="dialog" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importModalLabel">Import Data Siswa</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" action="<?= base_url('masterdata/import_siswa') ?>" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Unduh Template CSV</label>
+                        <div>
+                            <a href="<?= base_url('assets/templates/template_siswa.csv') ?>" class="btn btn-info btn-sm">
+                                <i class="fas fa-file-download"></i> Download Template
+                            </a>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="csv_file">Pilih File CSV</label>
+                        <input type="file" class="form-control-file" id="csv_file" name="csv_file" accept=".csv" required>
+                        <small class="text-muted">Format file harus CSV dengan kolom: NISN, NIS, NAMA, ID_KELAS, ID_SPP, ALAMAT, NO_TELP, TEMPO</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Tutup</button>
+                    <button type="submit" class="btn btn-primary">Import Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <footer class="main-footer">
     <strong>Copyright &copy; <?= date('Y') ?> Created by <a href="https://www.instagram.com/argyarf_/">Argya Rajaswa</a>.</strong>
     All rights reserved.
