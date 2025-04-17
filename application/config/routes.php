@@ -55,3 +55,5 @@ $route['translate_uri_dashes'] = FALSE;
 
 $route['masterdata/import_siswa'] = 'MasterData/import_siswa';
 $route['masterdata/download_template_siswa'] = 'MasterData/download_template_siswa';
+
+$route['pembayaran/process_imported/(:any)'] = 'pembayaran/process_imported/$1';

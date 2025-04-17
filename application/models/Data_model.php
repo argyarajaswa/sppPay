@@ -330,6 +330,40 @@ class Data_model extends CI_Model
         $this->db->where('id_kelas', $this->input->post('id_kelas'));
         $this->db->update('tbl_kelas');
     }
+    public function generate_tagihan_import($nisn) {
+        // 1. Get student data
+        $siswa = $this->db->get_where('tbl_siswa', ['NISN' => $nisn])->row();
+        
+        if (!$siswa) return false;
+    
+        // 2. Check if tagihan already exists
+        $existing = $this->db->get_where('tbl_tagihan', [
+            'NISN' => $nisn,
+            'BULAN' => date('m'),
+            'TAHUN' => date('Y')
+        ])->row();
+    
+        if (!$existing) {
+            // 3. Get SPP nominal
+            $spp = $this->db->get_where('tbl_spp', ['ID_SPP' => $siswa->ID_SPP])->row();
+            
+            // 4. Insert new tagihan
+            $data = [
+                'NISN' => $nisn,
+                'ID_SPP' => $siswa->ID_SPP,
+                'BULAN' => date('m'),
+                'TAHUN' => date('Y'),
+                'TGL_JATUH_TEMPO' => $siswa->TEMPO,
+                'JUMLAH' => $spp->NOMINAL,
+                'STATUS' => 'BELUM LUNAS'
+            ];
+            
+            $this->db->insert('tbl_tagihan', $data);
+            return $this->db->insert_id();
+        }
+        
+        return $existing->ID_TAGIHAN;
+    }
 
 
 
@@ -382,4 +416,6 @@ class Data_model extends CI_Model
 
         return $this->db->query($query)->row_array();
     }
+
+
 }
